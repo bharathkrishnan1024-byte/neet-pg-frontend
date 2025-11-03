@@ -46,11 +46,6 @@
             margin-bottom: 5px;
         }
         
-        .header p {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
         .messages {
             flex: 1;
             overflow-y: auto;
@@ -65,14 +60,8 @@
         }
         
         @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .message.user {
@@ -128,38 +117,10 @@
             border-radius: 24px;
             cursor: pointer;
             font-weight: 600;
-            transition: background 0.2s;
         }
         
         #sendButton:hover {
             background: #1e40af;
-        }
-        
-        .loading {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #666;
-            margin: 0 2px;
-            animation: loading 1.4s infinite;
-        }
-        
-        .loading:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-        
-        .loading:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-        
-        @keyframes loading {
-            0%, 60%, 100% {
-                opacity: 0.3;
-            }
-            30% {
-                opacity: 1;
-            }
         }
         
         .setup-screen {
@@ -180,7 +141,6 @@
             border: 1px solid #e5e7eb;
             border-radius: 8px;
             font-size: 14px;
-            font-family: inherit;
         }
         
         .setup-screen button {
@@ -192,7 +152,11 @@
             cursor: pointer;
             font-weight: 600;
             margin-top: 20px;
-            font-size: 16px;
+        }
+        
+        .loading {
+            color: #666;
+            font-size: 12px;
         }
     </style>
 </head>
@@ -206,12 +170,7 @@
         <div class="messages" id="messagesDiv"></div>
         
         <div class="input-area">
-            <input 
-                type="text" 
-                id="messageInput" 
-                placeholder="Type your response..."
-                autocomplete="off"
-            >
+            <input type="text" id="messageInput" placeholder="Type your response...">
             <button id="sendButton">Send</button>
         </div>
     </div>
@@ -219,144 +178,109 @@
     <div class="container" id="setupContainer">
         <div class="setup-screen">
             <h2>Welcome! 👋</h2>
-            <p style="color: #666; margin-bottom: 30px;">Let's set up your accountability profile</p>
+            <p style="color: #666; margin-bottom: 30px;">Set up your accountability profile</p>
             
-            <input type="text" id="nameInput" placeholder="Your name" maxlength="50">
-            <input type="email" id="emailInput" placeholder="Your email" maxlength="100">
+            <input type="text" id="nameInput" placeholder="Your name">
+            <input type="email" id="emailInput" placeholder="Your email">
             
             <select id="examInput">
-                <option value="">Select your exam</option>
+                <option value="">Select exam</option>
                 <option value="NEET PG">NEET PG 2026</option>
                 <option value="INICET">INICET 2026</option>
             </select>
             
-            <button onclick="startChat()">Start My Journey →</button>
+            <button onclick="startChat()">Start Journey →</button>
         </div>
     </div>
 
     <script>
         const API_URL = 'https://neet-pg-accountability.onrender.com';
-        
         let userId = null;
-        let messagesDiv = document.getElementById('messagesDiv');
-        let messageInput = document.getElementById('messageInput');
-        let sendButton = document.getElementById('sendButton');
-        let chatContainer = document.getElementById('chatContainer');
-        let setupContainer = document.getElementById('setupContainer');
-        
+
         window.addEventListener('load', () => {
-            const savedUserId = localStorage.getItem('userId');
-            if (savedUserId) {
-                userId = savedUserId;
+            const saved = localStorage.getItem('userId');
+            if (saved) {
+                userId = saved;
                 showChat();
                 loadMessages();
             }
         });
-        
-        function startChat() {
+
+        async function startChat() {
             const name = document.getElementById('nameInput').value.trim();
             const email = document.getElementById('emailInput').value.trim();
             const exam = document.getElementById('examInput').value;
             
             if (!name || !email || !exam) {
-                alert('Please fill in all fields');
+                alert('Fill all fields');
                 return;
             }
-            
-            fetch(`${API_URL}/api/user/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: name,
-                    email: email,
-                    exam_target: exam,
-                    preparation_stage: 'Just started',
-                    check_in_time: '07:00'
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
+
+            try {
+                const res = await fetch(`${API_URL}/api/user/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, exam_target: exam })
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                
                 userId = data.user_id;
                 localStorage.setItem('userId', userId);
                 showChat();
-                greetUser(name);
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                alert('Connection error. Please check if backend is running.');
-            });
-        }
-        
-        function showChat() {
-            setupContainer.style.display = 'none';
-            chatContainer.style.display = 'flex';
-        }
-        
-        function greetUser(name) {
-            const greeting = `Hello ${name}! 👋 Welcome to your NEET PG accountability journey. I'm Dr. Mentor, your AI coach. Let's start: How many hours did you study today?`;
-            displayMessage('ai', greeting);
-        }
-        
-        function displayMessage(sender, content) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}`;
-            const text = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            messageDiv.innerHTML = `<div class="message-content">${text}</div>`;
-            messagesDiv.appendChild(messageDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-        
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message) return;
-            
-            displayMessage('user', message);
-            messageInput.value = '';
-            
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'message ai';
-            loadingDiv.innerHTML = '<div class="message-content"><span class="loading"></span><span class="loading"></span><span class="loading"></span></div>';
-            messagesDiv.appendChild(loadingDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            
-            try {
-                const response = await fetch(`${API_URL}/api/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        message: message
-                    })
-                });
-                
-                loadingDiv.remove();
-                
-                if (!response.ok) throw new Error('API error');
-                
-                const data = await response.json();
-                displayMessage('ai', data.response);
-                
-            } catch (error) {
-                loadingDiv.remove();
-                console.error('Error:', error);
-                displayMessage('ai', 'Sorry, I encountered an error. Please try again.');
+                displayMessage('ai', `Hello ${name}! 👋 Welcome! How many hours did you study today?`);
+            } catch (e) {
+                alert('Error: ' + e.message);
             }
         }
-        
+
+        function showChat() {
+            document.getElementById('setupContainer').style.display = 'none';
+            document.getElementById('chatContainer').style.display = 'flex';
+        }
+
+        function displayMessage(sender, content) {
+            const div = document.createElement('div');
+            div.className = `message ${sender}`;
+            div.innerHTML = `<div class="message-content">${content}</div>`;
+            document.getElementById('messagesDiv').appendChild(div);
+            document.getElementById('messagesDiv').scrollTop = document.getElementById('messagesDiv').scrollHeight;
+        }
+
+        async function sendMessage() {
+            const msg = document.getElementById('messageInput').value.trim();
+            if (!msg) return;
+
+            displayMessage('user', msg);
+            document.getElementById('messageInput').value = '';
+
+            try {
+                const res = await fetch(`${API_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, message: msg })
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                displayMessage('ai', data.response);
+            } catch (e) {
+                displayMessage('ai', 'Error: ' + e.message);
+            }
+        }
+
         function loadMessages() {
             fetch(`${API_URL}/api/chat/history/${userId}`)
-                .then(res => res.json())
-                .then(messages => {
-                    messagesDiv.innerHTML = '';
-                    messages.forEach(msg => {
-                        displayMessage(msg.sender, msg.content);
-                    });
+                .then(r => r.json())
+                .then(msgs => {
+                    msgs.forEach(m => displayMessage(m.sender, m.content));
                 })
-                .catch(err => console.error('Error:', err));
+                .catch(e => console.log('History error:', e));
         }
-        
-        sendButton.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', (e) => {
+
+        document.getElementById('sendButton').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
     </script>
